@@ -28,9 +28,9 @@ from typing import List, Dict, Optional
 
 def _get_source_segment(source_lines: List[str], node: ast.AST) -> str:
     """Reconstruct the exact source text for an AST node using line numbers."""
-    start = node.lineno - 1
+    start = node.lineno - 1 # to match python indexing
     end = node.end_lineno  # end_lineno is inclusive, slicing is exclusive -> correct
-    return "\n".join(source_lines[start:end])
+    return "\n".join(source_lines[start:end]) #slices out just those lines, "\n".join(...) glues them back into one string with newlines restored.
 
 
 def _chunk_file(file_path: Path, repo_root: Path) -> List[Dict]:
@@ -43,15 +43,18 @@ def _chunk_file(file_path: Path, repo_root: Path) -> List[Dict]:
 
     try:
         tree = ast.parse(source)
+        #ast.parse() gives you a tree of nodes representing your code's structure. it carries only the line number not the source text
+
+        #So to actually get the text of a function, you have to go back to the original file's lines and slice out the right range yourself.
     except SyntaxError:
         # Skip files that don't parse (e.g. Python 2 syntax, templates, etc.)
         return chunks
 
     source_lines = source.splitlines()
-    rel_path = str(file_path.relative_to(repo_root))
+    rel_path = str(file_path.relative_to(repo_root))#this turns /Users/loukya/.../sample_repo/calculator.py into just calculator.py
 
     # Module-level docstring as its own chunk (useful for "what does this file do")
-    module_doc = ast.get_docstring(tree)
+    module_doc = ast.get_docstring(tree) #Before walking individual functions, grab the file-level docstring if one exists (the triple-quoted string at the very top of a file which explains what each file does)
     if module_doc:
         chunks.append({
             "id": f"{rel_path}::__module__",
@@ -64,8 +67,8 @@ def _chunk_file(file_path: Path, repo_root: Path) -> List[Dict]:
             "code": module_doc,
         })
 
-    for node in ast.walk(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+    for node in ast.walk(tree): #ast.walk(tree) - visits every node in the tree recursively including all functions, classes and variable assignment and every if loop. But this becomes too much.
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)): # this takes only the classes functions and async functions. if it takes if loop and all, then it will be out of context
             node_type = "class" if isinstance(node, ast.ClassDef) else "function"
             docstring = ast.get_docstring(node)
             code = _get_source_segment(source_lines, node)
@@ -97,14 +100,22 @@ def chunk_repo(repo_path: str, ignore_dirs: Optional[List[str]] = None) -> List[
     if ignore_dirs is None:
         ignore_dirs = {".git", "__pycache__", "venv", ".venv", "node_modules", ".mypy_cache"}
 
+    #Converts the string path into a Path object and resolves it to an absolute path (e.g. turns "../sample_repo" into /Users/loukya/Desktop/codebase-copilot/sample_repo)
     repo_root = Path(repo_path).resolve()
     all_chunks = []
 
+
+    #os.walk = recursive engine
+    #walks the entire folder tree, starting at repo_root. and for every folder it visits it going to return 3 things -
+    # 1. current folders path - dirpath
+    # 2. the list of subfolder names - dirnames
+    # 3. list of filenames inside the subfolder - filename
     for dirpath, dirnames, filenames in os.walk(repo_root):
         dirnames[:] = [d for d in dirnames if d not in ignore_dirs]
         for filename in filenames:
             if filename.endswith(".py"):
-                file_path = Path(dirpath) / filename
+                file_path = Path(dirpath) / filename #building the entire file path
+                # pass all the python files from the directory into the _chunk_file function
                 all_chunks.extend(_chunk_file(file_path, repo_root))
 
     return all_chunks

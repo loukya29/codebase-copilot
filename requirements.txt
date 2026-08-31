@@ -1,0 +1,29 @@
+# Agent orchestration
+langchain>=1.3
+langchain-core
+langgraph
+
+# Model providers (pick what you use; both listed so you can switch freely)
+langchain-anthropic
+langchain-openai
+
+# RAG: Hugging Face embeddings + vector store
+langchain-huggingface
+sentence-transformers
+faiss-cpu
+
+# Tooling the agent calls
+pytest
+ruff
+
+# UI
+gradio
+
+# Fine-tuning stack (Week 3 of the plan)
+transformers
+peft
+datasets
+evaluate
+torch
+
+python-dotenv

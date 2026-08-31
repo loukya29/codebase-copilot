@@ -26,20 +26,21 @@ from ingest import chunk_repo
 DEFAULT_CODE_MODEL = "microsoft/codebert-base"
 DEFAULT_FALLBACK_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
-
+# chunk_repo gives me plain python dicts. but the langchain vector stores uses a specific class called document. These documents have 2 things
+# page_content = the actual content that gets embedded and searched for
+# metadata = extra structure data
+# CREATES A LANGCHAIN DOCUMENT
 def _chunks_to_documents(chunks: List[Dict]) -> List[Document]:
     """Convert raw chunk dicts into LangChain Documents with metadata."""
     docs = []
     for c in chunks:
-        # Give the embedding model both the docstring (intent) and the code
-        # (implementation) -- this helps retrieval on natural-language queries
-        # like "where do we handle division" match code that has no comments.
+        # comment-style header that is used to identify the chunk - eg calculator.py::divide (function)
         text_parts = [f"# {c['file']}::{c['name']} ({c['type']})"]
         if c.get("docstring"):
             text_parts.append(f'"""{c["docstring"]}"""')
-        text_parts.append(c["code"])
-        page_content = "\n".join(text_parts)
-
+        text_parts.append(c["code"]) # actual source code
+        page_content = "\n".join(text_parts) # Glue the header + docstring + code into one string. this is fed into the embedding model
+        #The embedding model only ever "sees" and searches over page_content; it never uses metadata to decide similarity. Metadata is purely for your code to use afterward, to display results usefully or filter them.
         docs.append(Document(
             page_content=page_content,
             metadata={
@@ -74,6 +75,7 @@ class CodebaseRetriever:
             raise ValueError(f"No indexable Python files found in {repo_path}")
 
         docs = _chunks_to_documents(chunks)
+        #these "docs" are passed into the embedding model"| facebook ai similarity search is the vector stores we are using
         self.vectorstore = FAISS.from_documents(docs, self.embeddings)
         return len(chunks)
 

@@ -46,6 +46,7 @@ def search_codebase(query: str) -> str:
         formatted.append(f"--- {r['file']}::{r['name']} (lines {r['lines']}) ---\n{r['content']}")
     return "\n\n".join(formatted)
 
+# guard clause - if the set_repo_path is not called initially (that means the repo is not indexed), it returns an error string and not a python exception. This way the model can react accordingly since it is a string
 
 @tool
 def read_file(file_path: str) -> str:
@@ -86,7 +87,8 @@ def run_tests() -> str:
     except Exception as e:
         return f"Error running tests: {e}"
 
-
+# linting is a process where it analyses the surface level code without actually not understanding anything. Linting does not execute any code but it just checks for the correctness and style
+# it can be style violation, unused variables, typos in keywords or unused imports
 @tool
 def run_linter() -> str:
     """Run a linter (ruff) over the repo and return style/quality issues found.
@@ -111,7 +113,9 @@ def run_linter() -> str:
     except Exception as e:
         return f"Error running linter: {e}"
 
+# IMPORTANT - linting catches the structural problem and testing catches the behaviour problems
 
+# git diff is the command that shows you exactly what changed, line by line, between your last commit and your current uncommitted state
 @tool
 def git_diff() -> str:
     """Return the current uncommitted git diff for the repo, if it's a git
@@ -135,5 +139,45 @@ def git_diff() -> str:
     except Exception as e:
         return f"Error getting git diff: {e}"
 
+@tool
+def check_test_coverage() -> str:
+    """Run the test suite with coverage measurement and report which files
+    or lines are not covered by any test. Use this to check test quality,
+    not just whether tests pass -- a function can have no tests touching it
+    even while the full suite passes."""
+    if _repo_path is None:
+        return "Error: no repo path set."
+    try:
+        result = subprocess.run(
+            ["python3", "-m", "pytest", "--cov=.", "--cov-report=term-missing"],
+            cwd=_repo_path,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        output = result.stdout + "\n" + result.stderr
+        # The coverage table is appended after pytest's normal test output.
+        # It starts at a line beginning with "Name" (the table header) --
+        # find that line and only return from there onward, stripping the
+        # pass/fail test listing above it, which run_tests() already covers.
+        lines = output.splitlines()
+        table_start = next(
+            (i for i, line in enumerate(lines) if line.startswith("Name")),
+            None,
+        )
+        if table_start is None:
+            # Coverage plugin might not be installed, or produced no table
+            return (
+                    "Could not find a coverage table in the output. "
+                    "Is pytest-cov installed? Raw output:\n" + output[-2000:]
+            )
+        coverage_table = "\n".join(lines[table_start:])
+        return coverage_table
+    except FileNotFoundError:
+        return "Error: pytest-cov is not installed. Run: pip install pytest-cov"
+    except subprocess.TimeoutExpired:
+        return "Error: coverage run timed out after 60 seconds."
+    except Exception as e:
+        return f"Error running coverage: {e}"
 
-ALL_TOOLS = [search_codebase, read_file, run_tests, run_linter, git_diff]
+ALL_TOOLS = [search_codebase, read_file, run_tests, run_linter, git_diff, check_test_coverage]

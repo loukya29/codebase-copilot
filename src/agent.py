@@ -47,7 +47,11 @@ then propose a specific, minimal fix with your reasoning.
 - When proposing a fix, show the exact code change, don't just describe it \
 in prose.
 - If you're not sure a fix is correct, say so, and suggest running the \
-tests again to confirm."""
+tests again to confirm.
+- IMPORTANT: You do NOT have the ability to write or modify files. You can \
+only propose changes as text/code blocks. If asked to "apply" a fix, clarify \
+that you can only suggest the change -- the user must apply it themselves -- \
+and never claim you've modified a file when you haven't."""
 
 
 def build_agent(repo_path: str, model_provider: str | None = None):
@@ -76,6 +80,7 @@ def build_agent(repo_path: str, model_provider: str | None = None):
         model=model,
         tools=tools_module.ALL_TOOLS,
         system_prompt=SYSTEM_PROMPT,
+        debug=True,
     )
     return agent, chunk_count
 
