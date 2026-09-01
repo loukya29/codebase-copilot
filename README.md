@@ -31,33 +31,13 @@ sample_repo/    - A tiny calculator module WITH TWO REAL BUGS, for testing
 pip install -r requirements.txt
 ```
 
-You'll need an API key for whichever tool-calling model you use:
-```bash
-export ANTHROPIC_API_KEY="..."     # if using MODEL_PROVIDER=anthropic:...
-export OPENAI_API_KEY="..."        # if using MODEL_PROVIDER=openai:...
-export MODEL_PROVIDER="anthropic:claude-sonnet-4-5"   # or "openai:gpt-4o-mini"
-```
-
 **Why not a fully open-source model for the agent itself?** Small open
 Hugging Face models are generally unreliable at *tool calling* specifically
 -- it needs strong function-calling training most small models lack. This
 project uses HF models for the part they're genuinely great at (embeddings/
 retrieval, fully local and free) and a stronger hosted model for tool-calling
-orchestration. This is a legitimate, defensible engineering tradeoff --
-worth stating exactly this way in an interview if asked.
+orchestration
 
-## Run it
-
-**CLI:**
-```bash
-cd src
-python agent.py ../sample_repo
-```
-
-**Gradio UI:**
-```bash
-python app.py
-```
 
 ## Try these once it's running (against sample_repo)
 
@@ -81,23 +61,3 @@ your first real debugging target.
   provider's API, which weren't reachable in the sandbox this was built in.
   Run these yourself and they should work; if you hit an import or API
   error, that's the next thing to debug together.
-
-## Roadmap (Weeks 3-4 from the plan)
-
-- [ ] Label ~300-500 code diffs as "safe" vs "risky" fix, fine-tune a small
-      classifier (DistilBERT) with `peft`/LoRA, add as a `score_fix_safety` tool
-- [ ] Evaluation: hand-label 15-20 (query, correct file/function) pairs,
-      measure retrieval accuracy; measure "% of failing tests the agent's
-      suggested fix actually resolves"
-- [ ] Deploy the Gradio app to a Hugging Face Space
-- [ ] (Stretch) GitHub Action that runs this on PRs automatically
-
-
-**1. Create retriever object (loads embedding model into memory)
-2. Walk repo, parse every file into chunks           <- no embeddings yet
-3. Convert chunks into Documents                       <- no embeddings yet
-4. FAISS.from_documents() ──► embeds every chunk ──► builds searchable index
-5. Wire retriever + repo_path into tools.py's globals
-6. Set up connection to the LLM
-7. Assemble the agent (model + tools + instructions) ── nothing executes yet
-8. Return the ready-but-idle agent**

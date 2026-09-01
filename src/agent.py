@@ -14,10 +14,6 @@ models don't have. So this project splits the two jobs:
     or a HF model that explicitly supports tool calling, e.g. via HF
     Inference Providers with something like Qwen2.5-72B-Instruct)
 
-Set your model via the MODEL_PROVIDER env var, e.g.:
-  export MODEL_PROVIDER="anthropic:claude-sonnet-4-5"
-  export MODEL_PROVIDER="openai:gpt-4o-mini"
-  export ANTHROPIC_API_KEY="..."   (or OPENAI_API_KEY)
 """
 
 import os
