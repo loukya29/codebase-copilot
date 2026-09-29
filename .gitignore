@@ -7,3 +7,5 @@ sample_repo/.coverage
 sample_repo/__pycache__/
 src/.coverage
 src/__pycache__/
+bug_classifier_lora_adapter/
+bug_classifier_output/
